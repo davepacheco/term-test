@@ -5,13 +5,15 @@ fn main() {
 fn doit() {
     let t = term::stdout();
     if let Some(mut term) = t {
-        eprintln!("stdout found");
+        eprintln!("println to stderr (stdout found)");
+        println!("println to stdout (before)");
         term.fg(term::color::GREEN).unwrap();
-        write!(term, "writing this to stdout terminal!\n").unwrap();
+        write!(term, "terminal write to stdout\n").unwrap();
         term.reset().unwrap();
         term.flush().unwrap();
+        println!("println to stdout (after)");
     } else {
-        eprintln!("no stdout found");
+        eprintln!("println to stderr (stdout not found)");
     }
 }
 
