@@ -1,0 +1,118 @@
+= term-test
+
+Tests the behavior of `term`'s `stdout()` terminal.
+
+Take a look at src/main.rs.  The interesting bit is:
+
+[source,rust]
+----
+let t = term::stdout();
+if let Some(mut term) = t {
+    eprintln!("stdout found");
+    term.fg(term::color::GREEN).unwrap();
+    write!(term, "writing this to stdout terminal!\n").unwrap();
+    term.reset().unwrap();
+    term.flush().unwrap();
+} else {
+    eprintln!("no stdout found");
+}
+----
+
+== Running this as a binary
+
+If we run it as a program, we get what you might expect:
+
+[source,text]
+----
+$ cargo run
+   Compiling term-test v0.1.0 (/Users/dap/oxide/experiments/term)
+    Finished dev [unoptimized + debuginfo] target(s) in 0.27s
+     Running `target/debug/term-test`
+stdout found
+writing this to stdout terminal!
+----
+
+If you redirect stdout _or_ stderr, you're left with whatever you didn't redirect in your terminal (as you'd expect):
+
+[source,text]
+----
+$ cargo run > /dev/null
+    Finished dev [unoptimized + debuginfo] target(s) in 0.01s
+     Running `target/debug/term-test`
+stdout found
+$ cargo run 2> /dev/null
+writing this to stdout terminal!
+$
+----
+
+You can redirect stdout to a file, and we'll see that the output we wrote to the "terminal" is there, escape sequences and all:
+
+[source,text]
+----
+$ cargo run > foo
+    Finished dev [unoptimized + debuginfo] target(s) in 0.01s
+     Running `target/debug/term-test`
+stdout found
+$ xxd foo 
+00000000: 1b5b 3332 6d77 7269 7469 6e67 2074 6869  .[32mwriting thi
+00000010: 7320 746f 2073 7464 6f75 7420 7465 726d  s to stdout term
+00000020: 696e 616c 210a 1b28 421b 5b6d            inal!..(B.[m
+$
+----
+
+Okay, so `term` gives you back a terminal interface for stdout regardless of whether it's a real terminal.
+
+== Running this as a unit test
+
+If we use `--nocapture`, we get all of the output, as you'd expect:
+
+[source,text]
+----
+$ cargo test -- --nocapture
+    Finished test [unoptimized + debuginfo] target(s) in 0.01s
+     Running unittests (target/debug/deps/term_test-f7fd9a9422a0407e)
+
+running 1 test
+stdout found
+writing this to stdout terminal!
+test test_doit ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+----
+
+and the individual pieces go where you (might) expect:
+
+[source,text]
+----
+$ cargo test -- --nocapture >/dev/null
+    Finished test [unoptimized + debuginfo] target(s) in 0.01s
+     Running unittests (target/debug/deps/term_test-f7fd9a9422a0407e)
+stdout found
+
+$ cargo test -- --nocapture 2>/dev/null
+
+running 1 test
+writing this to stdout terminal!
+test test_doit ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+$
+----
+
+What's weird: if you _don't_ use `--nocapture`, you _still_ get the terminal output!  Even though you don't usually get stdout from tests without `--nocapture`.
+
+[source,text]
+----
+$ cargo test 
+    Finished test [unoptimized + debuginfo] target(s) in 0.01s
+     Running unittests (target/debug/deps/term_test-f7fd9a9422a0407e)
+
+running 1 test
+writing this to stdout terminal!
+test test_doit ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+----
+
+How does that happen?
